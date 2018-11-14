@@ -19,8 +19,8 @@ NB_EPOCH = 200
 PATIENCE = 10  # early stopping patience
 
 # Get data
-X, A, y = load_data(dataset=DATASET)
-y_train, y_val, y_test, idx_train, idx_val, idx_test, train_mask = get_splits(y)
+X, A, y = load_karate_data()
+y_train, y_val, y_test, idx_train, idx_val, idx_test, train_mask = get_splits_train_karate(y)
 
 # Normalize X
 X /= X.sum(1).reshape(-1, 1)
@@ -99,10 +99,6 @@ for epoch in range(1, NB_EPOCH+1):
         wait += 1
 
 # Testing
-
-# Print preds
-print(preds[:5,:])
-
 test_loss, test_acc = evaluate_preds(preds, [y_test], [idx_test])
 print("Test set results:",
       "loss= {:.4f}".format(test_loss[0]),
@@ -111,4 +107,4 @@ print("Test set results:",
 model.summary()
 
 # Save the trained model
-model.save("cora.h5")
+model.save_weights("karate.h5")

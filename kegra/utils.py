@@ -37,6 +37,58 @@ def load_data(path="data/cora/", dataset="cora"):
     return features.todense(), adj, labels
 
 
+# Load karate data
+def load_karate_data(path="/Users/xinranmu/Desktop/keras-gcn/"):
+    """Load citation network dataset (cora only for now)"""
+    print('Loading karate dataset.')
+
+    edges = np.loadtxt('{}edges.txt'.format(path), dtype=np.int32) - 1  # 0-based indexing
+    features = sp.eye(np.max(edges) + 1, dtype=np.float32).tocsr()
+    idx_labels = np.loadtxt("{}mod-based-clusters.txt".format(path), dtype=np.int32)
+    idx_labels = idx_labels[idx_labels[:, 0].argsort()]
+    labels = encode_onehot(idx_labels[:, 1])
+
+    adj = sp.coo_matrix((np.ones(edges.shape[0]), (edges[:, 0], edges[:, 1])), shape=(labels.shape[0], labels.shape[0]),
+                        dtype=np.float32)
+
+    # build symmetric adjacency matrix
+    adj = adj + adj.T.multiply(adj.T > adj) - adj.multiply(adj.T > adj)
+
+    print("Dataset has {} nodes, {} edges, {} features. ".format(adj.shape[0],
+                                                                 edges.shape[0],
+                                                                 features.shape[1]))
+    print("This is the shape of adj: ", adj.shape)
+    print("This is the shape of edges: ", edges.shape)
+    print("This is the shape of features: ", features.shape)
+    return features.todense(), adj, labels
+
+
+# Load karate fake data
+def load_karate_fake_data(path="/Users/xinranmu/Desktop/keras-gcn/"):
+    """Load citation network dataset (cora only for now)"""
+    print('Loading karate dataset.')
+
+    edges = np.loadtxt('{}edges_fake.txt'.format(path), dtype=np.int32) - 1  # 0-based indexing
+    features = sp.eye(np.max(edges) + 1, dtype=np.float32).tocsr()
+    idx_labels = np.loadtxt("{}mod-based-clusters_fake.txt".format(path), dtype=np.int32)
+    idx_labels = idx_labels[idx_labels[:, 0].argsort()]
+    labels = encode_onehot(idx_labels[:, 1])
+
+    adj = sp.coo_matrix((np.ones(edges.shape[0]), (edges[:, 0], edges[:, 1])), shape=(labels.shape[0], labels.shape[0]),
+                        dtype=np.float32)
+
+    # build symmetric adjacency matrix
+    adj = adj + adj.T.multiply(adj.T > adj) - adj.multiply(adj.T > adj)
+
+    print("Dataset has {} nodes, {} edges, {} features. ".format(adj.shape[0],
+                                                                 edges.shape[0],
+                                                                 features.shape[1]))
+    print("This is the shape of adj: ", adj.shape)
+    print("This is the shape of edges: ", edges.shape)
+    print("This is the shape of features: ", features.shape)
+    return features.todense(), adj, labels
+
+
 def normalize_adj(adj, symmetric=True):
     if symmetric:
         d = sp.diags(np.power(np.array(adj.sum(1)), -0.5).flatten(), 0)
@@ -60,6 +112,7 @@ def sample_mask(idx, l):
 
 
 def get_splits(y):
+    size = y.shape[0]
     idx_train = range(140)
     idx_val = range(200, 500)
     idx_test = range(500, 1500)
@@ -73,6 +126,34 @@ def get_splits(y):
     return y_train, y_val, y_test, idx_train, idx_val, idx_test, train_mask
 
 
+def get_splits_train_karate(y):
+    size = y.shape[0]  #
+    # idx_train = range(140)
+    # idx_val = range(200, 500)
+    # idx_test = range(500, 1500)
+
+    # This is for karate
+    idx_train = range(int(0.8 * size))
+    idx_val = range(int(0.5 * size), int(0.8 * size))
+    idx_test = range(int(0.8 * size), size)
+
+    y_train = np.zeros(y.shape, dtype=np.int32)
+    y_val = np.zeros(y.shape, dtype=np.int32)
+    y_test = np.zeros(y.shape, dtype=np.int32)
+    y_train[idx_train] = y[idx_train]
+    y_val[idx_val] = y[idx_val]
+    y_test[idx_test] = y[idx_test]
+    train_mask = sample_mask(idx_train, y.shape[0])
+    return y_train, y_val, y_test, idx_train, idx_val, idx_test, train_mask
+
+# splits function for karate dataset
+def get_karate_splits(y):
+    size = y.shape[0]
+    idx = range(size)
+    train_mask = sample_mask(idx, y.shape[0])
+    return y, idx, train_mask
+
+
 def categorical_crossentropy(preds, labels):
     return np.mean(-np.log(np.extract(labels, preds)))
 
@@ -82,7 +163,6 @@ def accuracy(preds, labels):
 
 
 def evaluate_preds(preds, labels, indices):
-
     split_loss = list()
     split_acc = list()
 
@@ -123,7 +203,7 @@ def chebyshev_polynomial(X, k):
         X_ = sp.csr_matrix(X, copy=True)
         return 2 * X_.dot(T_k_minus_one) - T_k_minus_two
 
-    for i in range(2, k+1):
+    for i in range(2, k + 1):
         T_k.append(chebyshev_recurrence(T_k[-1], T_k[-2], X))
 
     return T_k
